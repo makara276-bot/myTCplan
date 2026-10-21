@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ប្រព័ន្ធផែនការបង្រៀន ១ឆ្នាំ ដោយស្វ័យប្រវត្តិ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- ប្រើសម្រាប់ Export ជា PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Moul&display=swap');
+        
+        body {
+            font-family: 'Battambang', sans-serif;
+            background-color: #f0fdf4; /* Light green tint background */
+        }
+        
+        .font-moul {
+            font-family: 'Moul', cursive;
+        }
+
+        /* Table Styling */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: white;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #9ca3af;
+            padding: 6px 4px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        th {
+            background-color: #e5e7eb;
+            font-weight: bold;
+            color: #1f2937;
+        }
+        
+        .actual-input {
+            width: 80%;
+            margin: 0 auto;
+            display: block;
+            border: 1.5px dashed #94a3b8;
+            background-color: transparent;
+            padding: 4px;
+            text-align: center;
+            color: #0f172a;
+            border-radius: 4px;
+            outline: none;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .actual-input:focus {
+            border-color: #2563eb;
+            background-color: #f0f9ff;
+        }
+
+        /* Hide arrows for target inputs */
+        .hide-arrows::-webkit-outer-spin-button,
+        .hide-arrows::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .hide-arrows {
+            -moz-appearance: textfield;
+        }
+
+        /* Print Media Queries */
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-break {
+                page-break-before: always;
+            }
+            table {
+                font-size: 11px;
+            }
+            th, td {
+                padding: 4px 2px;
+            }
+            .shadow-lg, .shadow-md {
+                box-shadow: none !important;
+            }
+            .border, .border-gray-200 {
+                border-color: #000 !important;
+            }
+            @page {
+                size: landscape;
+                margin: 10mm;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="app">
+        <!-- ប្រព័ន្ធសុវត្ថិភាព (Login Screen) -->
+        <div v-if="!isAuthenticated" class="fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center border-t-4 border-green-600">
+                <svg class="w-16 h-16 text-green-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                <h2 class="text-2xl font-bold mb-2 font-moul">ប្រព័ន្ធសុវត្ថិភាព</h2>
+                <p class="text-gray-500 mb-6 text-sm">សូមបញ្ចូលលេខកូដសម្ងាត់ដើម្បីចូលប្រើប្រាស់</p>
+                
+                <input type="password" v-model="loginInput" @keyup.enter="login" class="w-full border-2 border-gray-300 rounded-lg p-3 text-center text-xl tracking-widest focus:border-green-500 focus:outline-none mb-4" placeholder="••••">
+                <p v-if="loginError" class="text-red-500 text-sm mb-4 font-bold">{{ loginError }}</p>
+                
+                <button @click="login" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md">ចូលប្រព័ន្ធ (Login)</button>
+            </div>
+        </div>
+
+        <!-- ផ្ទាំងកម្មវិធីមេ (បង្ហាញពេល Login រួច) -->
+        <div v-else class="max-w-[1400px] mx-auto animate-[fadeIn_0.5s_ease-in-out]">
+            <!-- UI Controls (Hidden on Print) -->
+            <div class="no-print mb-8 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-md border-t-4 border-green-600">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        ផ្ទាំងកំណត់ទិន្នន័យ (Settings)
+                    </h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div><label class="block text-sm font-bold text-gray-700 mb-1">សាលារៀន</label><input type="text" v-model="school" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                        <div><label class="block text-sm font-bold text-gray-700 mb-1">ថ្នាក់ទី</label><input type="text" v-model="className" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                        <div><label class="block text-sm font-bold text-gray-700 mb-1">ឈ្មោះគ្រូបង្រៀន</label><input type="text" v-model="teacher" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                        <div><label class="block text-sm font-bold text-gray-700 mb-1">នាយិការងបច្ចេកទេស</label><input type="text" v-model="principal" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                        <div><label class="block text-sm font-bold text-gray-700 mb-1">លេខទូរសព្ទ ១</label><input type="text" v-model="phone1" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                        <div><label class="block text-sm font-bold text-gray-700 mb-1">លេខទូរសព្ទ ២</label><input type="text" v-model="phone2" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">កាលបរិច្ឆេទ (ខ្មែរ)</label><input type="text" v-model="khmerDate" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">កាលបរិច្ឆេទ (សកល)</label><input type="text" v-model="westernDate" class="w-full border p-2 rounded outline-none focus:border-green-500"></div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h3 class="text-lg font-bold text-blue-700 mb-3">វាយបញ្ចូលចំនួនសិស្សមូលដ្ឋាន (ដើមឆ្នាំ)</h3>
+                    <div class="flex flex-wrap gap-4 items-end">
+                        <div v-for="(grade, index) in grades" :key="index" class="w-20">
+                            <label class="block text-center font-bold text-gray-700 mb-1">និទ្ទេស {{ grade }}</label>
+                            <input type="number" v-model.number="baseDataInputs[index]" min="0" class="w-full border-2 border-blue-300 p-2 rounded text-center text-lg font-bold text-blue-800 focus:border-blue-600 outline-none">
+                        </div>
+                        
+                        <div class="w-32 ml-auto">
+                            <label class="block text-center font-bold text-gray-700 mb-1">សិស្សសរុប</label>
+                            <div class="w-full bg-gray-100 border p-2 rounded text-center text-lg font-bold text-red-600">
+                                {{ baseTotal }} នាក់
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap justify-end gap-3 no-print">
+                    <!-- Excel Export Button -->
+                    <button @click="exportExcel" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded shadow flex items-center transition">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        ទាញយកជា Excel
+                    </button>
+                    <!-- PDF Export Button -->
+                    <button @click="exportPDF" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded shadow flex items-center transition">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        ទាញយកជា PDF
+                    </button>
+                    <!-- Print Button -->
+                    <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded shadow flex items-center transition">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        បោះពុម្ព (Print)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Document Start (Printable Area) -->
+            <div id="printable-area" class="bg-white p-2 md:p-8 rounded-xl shadow-lg border border-gray-200 min-h-screen">
+                
+                <!-- Header section matching exactly with PDF -->
+                <div class="flex justify-between items-start mb-4">
+                    <div class="text-left font-bold text-sm md:text-base leading-relaxed">
+                        <p>ខេត្តឧត្តរមានជ័យ</p>
+                        <p>មន្ទីរអប់រំ យុវជននិងកីឡា</p>
+                    </div>
+                    <div class="text-center flex-1">
+                        <h1 class="text-xl md:text-2xl font-moul mb-2">ព្រះរាជាណាចក្រកម្ពុជា</h1>
+                        <h2 class="text-lg md:text-xl font-moul mb-6">ជាតិសាសនា ព្រះមហាក្សត្រ</h2>
+                    </div>
+                    <div class="w-32 hidden md:block"></div> <!-- Spacer to balance flex -->
+                </div>
+
+                <div class="text-center mb-6">
+                    <h3 class="text-lg md:text-xl font-bold mt-2 mb-6">
+                        ផែនការ និងរបាយការណ៍ បង្រៀន ១ឆ្នាំ របស់គ្រូមុខវិជ្ជា ផែនដីវិទ្យា (២០២៥-២០២៦)
+                    </h3>
+                </div>
+
+                <div class="flex justify-between text-sm md:text-base font-bold mb-4">
+                    <div class="space-y-1">
+                        <p>-ឈ្មោះសាលា៖ {{ school }}</p>
+                        <p>-ថ្នាក់ទី <span class="text-red-600">{{ className }}</span></p>
+                        <p>-ឈ្មោះគ្រូ {{ teacher }}</p>
+                        <p>-ឈ្មោះនាយិការងបច្ចេកទេស៖ {{ principal }}</p>
+                    </div>
+                    <div class="space-y-1 text-left md:text-right">
+                        <p>ចំនួនសិស្ស សរុប៖ <span class="text-red-600">{{ baseTotal }}</span> នាក់</p>
+                        <p>លេខទូរសព្ទ៖ {{ phone1 }}</p>
+                        <p>លេខទូរសព្ទ៖ {{ phone2 }}</p>
+                    </div>
+                </div>
+
+                <div v-for="(table, tIndex) in tables" :key="tIndex" class="mb-10" :class="{'print-break': tIndex > 0}">
+                    <div class="overflow-x-auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="3" class="w-16">និទ្ទេស</th>
+                                    <th colspan="2" rowspan="2" class="w-24">ទិន្នន័យ<br>មូលដ្ឋាន</th>
+                                    <th colspan="12">ចំនួន និងភាគរយ ផែនដី វិទ្យា</th>
+                                    <th rowspan="3" class="w-20 text-red-700">ចំនួន %<br>ចុងឆ្នាំសិក្សា</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="2">ផែនការ ខែ{{ table.months[0].name }}</th>
+                                    <th colspan="2">ចុងខែ{{ table.months[0].name }}</th>
+                                    <th colspan="2">ផែនការ ខែ{{ table.months[1].name }}</th>
+                                    <th colspan="2">ចុងខែ{{ table.months[1].name }}</th>
+                                    <th colspan="2">ផែនការ ខែ{{ table.months[2].name }}</th>
+                                    <th colspan="2">ចុងខែ{{ table.months[2].name }}</th>
+                                </tr>
+                                <tr>
+                                    <th>ចំនួន</th><th>%</th>
+                                    <th>ចំនួន</th><th>%</th>
+                                    <th>ចំនួន</th><th>%</th>
+                                    <th>ចំនួន</th><th>%</th>
+                                    <th>ចំនួន</th><th>%</th>
+                                    <th>ចំនួន</th><th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(grade, gIndex) in grades" :key="gIndex">
+                                    <td class="font-bold text-lg">{{ grade }}</td>
+                                    
+                                    <!-- Base Data -->
+                                    <td class="font-bold">{{ baseDataInputs[gIndex] || '' }}</td>
+                                    <td class="text-gray-600">{{ formatPercentNum(basePercents[gIndex]) }}</td>
+                                    
+                                    <!-- Month 1 Plan -->
+                                    <td class="font-bold text-blue-700">{{ displayNum(getPlanNumber(table.months[0].step, gIndex)) }}</td>
+                                    <td class="text-blue-700 font-bold">{{ getPlanPercentDisplay(table.months[0].step, gIndex) }}</td>
+                                    
+                                    <!-- Month 1 Actual (Automated %) -->
+                                    <td class="w-12 relative group">
+                                        <input type="number" v-model.number="actualData[table.months[0].step - 1][gIndex]" class="actual-input no-print hide-arrows text-center">
+                                        <span class="hidden print:inline">{{ actualData[table.months[0].step - 1][gIndex] }}</span>
+                                    </td>
+                                    <td class="w-10 text-gray-700 font-bold">{{ getActualPercent(table.months[0].step - 1, gIndex) }}</td>
+                                    
+                                    <!-- Month 2 Plan -->
+                                    <td class="font-bold text-blue-700">{{ displayNum(getPlanNumber(table.months[1].step, gIndex)) }}</td>
+                                    <td class="text-blue-700 font-bold">{{ getPlanPercentDisplay(table.months[1].step, gIndex) }}</td>
+                                    
+                                    <!-- Month 2 Actual (Automated %) -->
+                                    <td class="w-12 relative group">
+                                        <input type="number" v-model.number="actualData[table.months[1].step - 1][gIndex]" class="actual-input no-print hide-arrows text-center">
+                                        <span class="hidden print:inline">{{ actualData[table.months[1].step - 1][gIndex] }}</span>
+                                    </td>
+                                    <td class="w-10 text-gray-700 font-bold">{{ getActualPercent(table.months[1].step - 1, gIndex) }}</td>
+                                    
+                                    <!-- Month 3 Plan -->
+                                    <td class="font-bold text-blue-700">{{ displayNum(getPlanNumber(table.months[2].step, gIndex)) }}</td>
+                                    <td class="text-blue-700 font-bold">{{ getPlanPercentDisplay(table.months[2].step, gIndex) }}</td>
+                                    
+                                    <!-- Month 3 Actual (Automated %) -->
+                                    <td class="w-12 relative group">
+                                        <input type="number" v-model.number="actualData[table.months[2].step - 1][gIndex]" class="actual-input no-print hide-arrows text-center">
+                                        <span class="hidden print:inline">{{ actualData[table.months[2].step - 1][gIndex] }}</span>
+                                    </td>
+                                    <td class="w-10 text-gray-700 font-bold">{{ getActualPercent(table.months[2].step - 1, gIndex) }}</td>
+                                    
+                                    <!-- End of Year (% Only) -->
+                                    <td class="font-bold text-red-600 text-sm w-20 relative">
+                                        <span v-if="baseTotal > 0">
+                                            <div class="flex items-center justify-center gap-0.5">
+                                                <input type="number" v-model.number="targetInputs[gIndex]" class="w-8 border-b border-red-300 bg-transparent text-center outline-none focus:border-red-600 text-red-600 font-bold no-print hide-arrows p-0" min="0" max="100">
+                                                <span class="no-print">%</span>
+                                                <span class="hidden print:inline">{{ Math.round(targetPercents[gIndex] * 100) }}%</span>
+                                            </div>
+                                        </span>
+                                    </td>
+                                </tr>
+                                
+                                <tr class="font-bold bg-gray-50">
+                                    <td>សរុប</td>
+                                    <!-- Base Totals -->
+                                    <td>{{ baseTotal > 0 ? baseTotal : '' }}</td>
+                                    <td>{{ baseTotal > 0 ? '100%' : '' }}</td>
+                                    
+                                    <!-- Month 1 -->
+                                    <td>{{ displayNum(getPlanNumberTotal(table.months[0].step)) }}</td>
+                                    <td>{{ baseTotal > 0 ? '100%' : '' }}</td>
+                                    <td>{{ getActualTotal(table.months[0].step - 1) }}</td>
+                                    <td>{{ getActualTotalPercent(table.months[0].step - 1) }}</td>
+                                    
+                                    <!-- Month 2 -->
+                                    <td>{{ displayNum(getPlanNumberTotal(table.months[1].step)) }}</td>
+                                    <td>{{ baseTotal > 0 ? '100%' : '' }}</td>
+                                    <td>{{ getActualTotal(table.months[1].step - 1) }}</td>
+                                    <td>{{ getActualTotalPercent(table.months[1].step - 1) }}</td>
+                                    
+                                    <!-- Month 3 -->
+                                    <td>{{ displayNum(getPlanNumberTotal(table.months[2].step)) }}</td>
+                                    <td>{{ baseTotal > 0 ? '100%' : '' }}</td>
+                                    <td>{{ getActualTotal(table.months[2].step - 1) }}</td>
+                                    <td>{{ getActualTotalPercent(table.months[2].step - 1) }}</td>
+                                    
+                                    <!-- End of Year -->
+                                    <td class="text-red-700">
+                                        <span v-if="baseTotal > 0">100%</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Footer Notes -->
+                    <p v-if="tIndex === 0" class="text-sm mt-3 font-bold">
+                        កម្រិតពិន្ទុ៖ Fក្រោម 25ពិន្ទុ Eពី 25-29ពិន្ទុ Dពី 30-34ពិន្ទុ Cពី 35-39ពិន្ទុ Bពី 40-44ពិន្ទុ Aពី 45-50ពិន្ទុ
+                    </p>
+                    <p v-if="tIndex === 2" class="text-sm mt-3 font-bold">
+                        សម្គាល់៖ ចំនួន% ចុងឆ្នាំសិក្សា គឺប្រែប្រួល តាមទិន្នន័យមូលដ្ឋាន ឬ តេស្តដើមឆ្នាំ
+                    </p>
+                </div>
+
+                <!-- Signatures Section exactly like PDF -->
+                <div class="grid grid-cols-3 text-center text-sm md:text-base font-bold mt-10 mb-8 pt-6">
+                    <div>
+                        <p>បានពិនិត្យ ត្រឹមត្រូវ</p>
+                        <p>ប្រធានក្រុម បច្ចេកទេស</p>
+                        <div class="mt-24"></div>
+                        <p>.......................................</p>
+                    </div>
+                    <div>
+                        <p>បានឃើញ និងឯកភាព</p>
+                        <p>នាយក/នាយករង</p>
+                        <div class="mt-24"></div>
+                        <p>{{ principal }}</p>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <p>{{ khmerDate }}</p>
+                        <p>{{ westernDate }}</p>
+                        <p>រៀបចំដោយគ្រូមុខវិជ្ជា</p>
+                        <div class="mt-12"></div>
+                        <p>{{ teacher }}</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // Security Settings
+                    isAuthenticated: false,
+                    loginInput: '',
+                    loginError: '',
+                    SECRET_CODE: '2026', // <--- ប្តូរលេខកូដសម្ងាត់នៅទីនេះ
+
+                    // Document Settings
+                    school: 'វិទ្យាល័យ តេជោសែន សំរោង',
+                    className: '7A',
+                    teacher: 'ឡង់ មករា',
+                    principal: 'អឿយ សុវណ្ណ',
+                    phone1: '097 675 9995',
+                    phone2: '088 226 9982',
+                    khmerDate: 'ថ្ងៃ សុក្រ ៨កើត ខែមិគសិរ ឆ្នាំម្សាញ់ សប្តស័ក ព.ស.២៥៦៩',
+                    westernDate: 'សំរោង ថ្ងៃទី២៨ ខែវិច្ឆិកា ឆ្នាំ២០២៥',
+                    
+                    // Table Data
+                    grades: ['A', 'B', 'C', 'D', 'E', 'F'],
+                    baseDataInputs: [null, null, null, null, null, null],
+                    targetInputs: [15, 25, 30, 20, 10, 0], // Default Target % for A, B, C, D, E, F
+                    
+                    // Data structure for "Actual" months (9 months x 6 grades)
+                    actualData: Array(9).fill().map(() => Array(6).fill(null)),
+
+                    tables: [
+                        { months: [{name: 'វិច្ឆិកា', step: 1}, {name: 'ធ្នូ', step: 2}, {name: 'មករា', step: 3}] },
+                        { months: [{name: 'កុម្ភៈ', step: 4}, {name: 'មីនា', step: 5}, {name: 'មេសា', step: 6}] },
+                        { months: [{name: 'ឧសភា', step: 7}, {name: 'មិថុនា', step: 8}, {name: 'កក្កដា', step: 9}] },
+                    ]
+                }
+            },
+            computed: {
+                baseTotal() {
+                    return this.baseDataInputs.reduce((sum, val) => sum + (Number(val) || 0), 0);
+                },
+                basePercents() {
+                    if (this.baseTotal === 0) return Array(6).fill(0);
+                    return this.baseDataInputs.map(val => (Number(val) || 0) / this.baseTotal);
+                },
+                targetPercents() {
+                    if (this.baseTotal === 0) return Array(6).fill(0);
+                    let inputs = this.targetInputs.map(v => Number(v) || 0);
+                    let sum = inputs.reduce((a, b) => a + b, 0);
+                    if (sum === 0) return Array(6).fill(0);
+                    return inputs.map(v => v / sum);
+                },
+                planSteps() {
+                    // បង្កើតក្បួន Monotonicity ដើម្បីធានាថា A-E កើនរហូត ហើយ F ថយរហូត
+                    if (this.baseTotal === 0) return Array(10).fill(Array(6).fill(0));
+                    
+                    let base = this.baseDataInputs.map(v => Number(v) || 0);
+                    
+                    // គណនាគោលដៅចុងឆ្នាំឱ្យចេញជាចំនួនសិស្សគត់ (ប្រើ Largest Remainder)
+                    let targetExact = this.targetPercents.map(p => p * this.baseTotal);
+                    let targetInts = targetExact.map(Math.floor);
+                    let diffTarget = this.baseTotal - targetInts.reduce((a,b)=>a+b, 0);
+                    let fracsTarget = targetExact.map((v, i) => ({ i, frac: v - Math.floor(v) }));
+                    fracsTarget.sort((a,b) => b.frac - a.frac);
+                    for(let i=0; i<diffTarget; i++) targetInts[fracsTarget[i].i]++;
+                    
+                    let steps = [base];
+                    
+                    // បង្កើតទិន្នន័យទាំង ៨ ជំហាន (ពីវិច្ឆិកា ដល់ កក្កដា)
+                    for (let s = 1; s <= 8; s++) {
+                        let exacts = this.grades.map((_, i) => base[i] + (s / 8) * (targetInts[i] - base[i]));
+                        let floored = exacts.map(Math.floor);
+                        let diff = this.baseTotal - floored.reduce((a, b) => a + b, 0);
+                        let fractions = exacts.map((val, i) => ({ i, frac: val - Math.floor(val) }));
+                        fractions.sort((a, b) => b.frac - a.frac);
+                        for(let i=0; i<diff; i++) floored[fractions[i].i]++;
+                        steps.push(floored);
+                    }
+                    
+                    // ការពារភាពរអាក់រអួល (Wobble): បង្ខំឱ្យ A-E ស្មើ ឬកើនឡើងជានិច្ច ធៀបនឹងខែមុន
+                    for(let s = 1; s <= 8; s++) {
+                        for(let i = 0; i < 5; i++) { // និទ្ទេស A ដល់ E
+                            while(steps[s][i] < steps[s-1][i]) {
+                                steps[s][i]++; // បង្ខំឱ្យកើនស្មើខែមុន
+                                steps[s][5]--; // ដក F ចេញដើម្បីទូទាត់សមតុល្យ១០០%
+                            }
+                        }
+                    }
+                    
+                    // ចងទិន្នន័យ ៩ខែ (ដោយខែទី៦=មេសា គឺស្ទួនទិន្នន័យខែទី៥=មីនា)
+                    let monthly = [base]; 
+                    for(let m = 1; m <= 9; m++) {
+                        let effStep = m <= 5 ? m : (m === 6 ? 5 : m - 1);
+                        monthly[m] = steps[effStep];
+                    }
+                    
+                    return monthly;
+                }
+            },
+            methods: {
+                // Login Security
+                login() {
+                    if (this.loginInput === this.SECRET_CODE) {
+                        this.isAuthenticated = true;
+                        this.loginError = '';
+                    } else {
+                        this.loginError = 'លេខកូដមិនត្រឹមត្រូវទេ! សូមសាកល្បងម្តងទៀត។';
+                    }
+                },
+                
+                // Calculation Engine (Plans)
+                getPlanNumber(step, gradeIndex) {
+                    if (this.baseTotal === 0) return 0;
+                    return this.planSteps[step][gradeIndex];
+                },
+                getPlanPercentDisplay(step, gradeIndex) {
+                    if (this.baseTotal === 0) return '';
+                    let val = this.planSteps[step][gradeIndex];
+                    return Math.round((val / this.baseTotal) * 100) + '%';
+                },
+                getPlanNumberTotal(step) {
+                    if (this.baseTotal === 0) return 0;
+                    return this.baseTotal; 
+                },
+
+                // Calculation Engine (Actual Data / ចុងខែ)
+                getActualPercent(monthIndex, gradeIndex) {
+                    let val = this.actualData[monthIndex][gradeIndex];
+                    if (val === null || val === '' || this.baseTotal === 0) return '';
+                    return Math.round((Number(val) / this.baseTotal) * 100) + '%';
+                },
+                getActualTotal(monthIndex) {
+                    let sum = 0;
+                    let hasValue = false;
+                    for(let i=0; i<6; i++){
+                        if(this.actualData[monthIndex][i] !== null && this.actualData[monthIndex][i] !== '') {
+                            sum += Number(this.actualData[monthIndex][i]);
+                            hasValue = true;
+                        }
+                    }
+                    return hasValue ? sum : '';
+                },
+                getActualTotalPercent(monthIndex) {
+                    let total = this.getActualTotal(monthIndex);
+                    if (total === '' || this.baseTotal === 0) return '';
+                    return Math.round((total / this.baseTotal) * 100) + '%';
+                },
+                
+                // Formatting Helpers
+                formatPercentNum(val) {
+                    if (!val && val !== 0 || this.baseTotal === 0) return '';
+                    return Math.round(val * 100) + '%';
+                },
+                displayNum(val) {
+                    return (val === 0 && this.baseTotal === 0) ? '' : val;
+                },
+
+                // EXPORT METHODS
+                exportPDF() {
+                    const element = document.getElementById('printable-area');
+                    const opt = {
+                        margin:       10,
+                        filename:     'Teaching_Plan.pdf',
+                        image:        { type: 'jpeg', quality: 0.98 },
+                        html2canvas:  { scale: 2, useCORS: true },
+                        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+                    };
+                    html2pdf().set(opt).from(element).save();
+                },
+
+                exportExcel() {
+                    // Clone the printable area to avoid touching the live DOM
+                    let clone = document.getElementById('printable-area').cloneNode(true);
+                    
+                    // Replace all text inputs with their string values so they export well
+                    let originalInputs = document.getElementById('printable-area').querySelectorAll('input');
+                    let clonedInputs = clone.querySelectorAll('input');
+                    for (let i = 0; i < originalInputs.length; i++) {
+                        let span = document.createElement('span');
+                        span.innerText = originalInputs[i].value;
+                        clonedInputs[i].parentNode.replaceChild(span, clonedInputs[i]);
+                    }
+                    
+                    // Remove elements marked as no-print
+                    clone.querySelectorAll('.no-print').forEach(el => el.remove());
+                    // Unhide elements meant for print/export
+                    clone.querySelectorAll('.print\\:inline').forEach(el => {
+                        el.classList.remove('hidden');
+                        el.style.display = 'inline';
+                    });
+
+                    // Add border attribute for Excel rendering
+                    let html = clone.innerHTML.replace(/<table/g, '<table border="1"');
+                    
+                    // Convert to Blob and download
+                    let blob = new Blob(['\ufeff', `
+                        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                        <head><meta charset="utf-8"></head><body>${html}</body></html>
+                    `], { type: 'application/vnd.ms-excel' });
+                    
+                    let url = URL.createObjectURL(blob);
+                    let a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'Teaching_Plan_Auto.xls';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
